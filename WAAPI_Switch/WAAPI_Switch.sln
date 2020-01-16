@@ -1,0 +1,43 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WAAPI_Switch", "WAAPI_Switch.csproj", "{F2185042-DFF2-475E-850F-29EA55CF1831}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaapiClientJson", "..\..\..\..\..\..\Applications\Audiokinetic\Wwise 2019.1.4.7065\SDK\samples\WwiseAuthoringAPI\cs\WaapiClientJson\WaapiClientJson.csproj", "{102D363C-7CB8-A300-85C9-26F5F1D3FF00}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaapiClientCore", "..\..\..\..\..\..\Applications\Audiokinetic\Wwise 2019.1.4.7065\SDK\samples\WwiseAuthoringAPI\cs\WaapiClientCore\WaapiClientCore.csproj", "{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|anycpu = Debug|anycpu
+		Release|anycpu = Release|anycpu
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Debug|anycpu.ActiveCfg = Debug|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Debug|anycpu.Build.0 = Debug|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Release|anycpu.ActiveCfg = Release|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Release|anycpu.Build.0 = Release|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Debug|x64.ActiveCfg = Debug|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Debug|x64.Build.0 = Debug|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Release|x64.ActiveCfg = Release|anycpu
+		{F2185042-DFF2-475E-850F-29EA55CF1831}.Release|x64.Build.0 = Release|anycpu
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Debug|anycpu.ActiveCfg = Debug|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Debug|anycpu.Build.0 = Debug|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Release|anycpu.ActiveCfg = Release|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Release|anycpu.Build.0 = Release|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Debug|x64.ActiveCfg = Debug|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Debug|x64.Build.0 = Debug|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Release|x64.ActiveCfg = Release|x64
+		{102D363C-7CB8-A300-85C9-26F5F1D3FF00}.Release|x64.Build.0 = Release|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Debug|anycpu.ActiveCfg = Debug|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Debug|anycpu.Build.0 = Debug|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Release|anycpu.ActiveCfg = Release|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Release|anycpu.Build.0 = Release|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Debug|x64.ActiveCfg = Debug|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Debug|x64.Build.0 = Debug|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Release|x64.ActiveCfg = Release|x64
+		{BF45323C-2BD1-9F00-34E2-22F5A0ECFB00}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+EndGlobal
