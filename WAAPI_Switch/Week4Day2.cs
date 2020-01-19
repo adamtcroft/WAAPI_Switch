@@ -9,27 +9,28 @@ namespace WAAPI_Switch
 {
     class MainClassDay2
     {
-        public static void Main(string[] args)
+        public static void MainDay2(string[] args)
         {
-            _Main().Wait();
+            _MainDay2().Wait();
         }
 
-        static async Task _Main()
+        static async Task _MainDay2()
         {
             var client = CreateConnection().Result;
             var switches = GetSwitchObjects(client).Result;
             await AssignSwitchContainers(client, switches);
+            client.Close();
         }
 
-        private static async Task AssignSwitchContainers(AK.Wwise.Waapi.JsonClient client, List<JToken>[] switches)
+        private static async Task AssignSwitchContainers(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
-            foreach (var container in switches[0])
+            foreach (var container in switches.containers)
             {
                 var result = await client.Call(
                     ak.wwise.core.@object.get,
                     new JObject
                     (
-                       new JProperty("from", new JObject(new JProperty("id", new JArray(new string[] { container["id"].ToString() }))))
+                       new JProperty("from", new JObject(new JProperty("id", new JArray(new string[] { container.id }))))
                     ),
                     new JObject
                     (
@@ -38,20 +39,21 @@ namespace WAAPI_Switch
 
                 var token = result["return"][0]["@SwitchGroupOrStateGroup"];
 
-                if (token["id"].ToString() == "{00000000-0000-0000-0000-000000000000}")
+                if (token["id"].ToString() == "{00000000-0000-0000-0000-000000000000}"
+                    || token["id"].ToString() != switches.groups.Find(group => group.name == container.name).name)
                 {
-                    foreach (var group in switches[1])
+                    foreach (var group in switches.groups)
                     {
-                        if (container["name"].ToString() == group["name"].ToString())
+                        if (container.name == group.name)
                         {
-                            Console.WriteLine("Assigning " + container["name"].ToString() + " to " + group["name"].ToString());
+                            Console.WriteLine("Assigning " + container.name + " to " + group.name);
                             await client.Call(
                                 ak.wwise.core.@object.setReference,
                                 new JObject
                                 (
                                     new JProperty("reference", "SwitchGroupOrStateGroup"),
-                                    new JProperty("object", container["id"].ToString()),
-                                    new JProperty("value", group["id"].ToString())
+                                    new JProperty("object", container.id),
+                                    new JProperty("value", group.id)
                                 ),
                                 null
                             );
@@ -61,9 +63,9 @@ namespace WAAPI_Switch
             }
         }
 
-        private static async Task<List<JToken>[]> GetSwitchObjects(AK.Wwise.Waapi.JsonClient client)
+        private static async Task<SwitchCollection> GetSwitchObjects(AK.Wwise.Waapi.JsonClient client)
         {
-            List<JToken>[] switches = new List<JToken>[2];
+            SwitchCollection switchCollection = new SwitchCollection();
 
             var query = new JObject
                         (
@@ -81,56 +83,52 @@ namespace WAAPI_Switch
                 var results = await client.Call(
                     ak.wwise.core.@object.get,
                     query,
-                    options);
+                options);
                 Console.WriteLine(results);
 
                 var tokens = results["return"];
 
-                List<JToken> containers = new List<JToken>();
-                List<JToken> containerNames = new List<JToken>();
-                List<JToken> groups = new List<JToken>();
-                List<JToken> groupNames = new List<JToken>();
+                List<SwitchContainer> containers = new List<SwitchContainer>();
+                List<SwitchGroup> groups = new List<SwitchGroup>();
 
+                Console.WriteLine();
                 foreach (var token in tokens)
                 {
                     if (token["type"].ToString() == "SwitchContainer")
                     {
-                        containers.Add(token);
-                        containerNames.Add(token["name"]);
+                        containers.Add(token.ToObject<SwitchContainer>());
                         Console.WriteLine("Added " + token["name"].ToString() + " to Containers!");
                     }
 
                     if (token["type"].ToString() == "SwitchGroup")
                     {
-                        groups.Add(token);
-                        groupNames.Add(token["name"]);
+                        groups.Add(token.ToObject<SwitchGroup>());
                         Console.WriteLine("Added " + token["name"].ToString() + " to Groups!");
                     }
                 }
 
-                var differences = groupNames.Except(containerNames);
-                List<JToken> toRemove = new List<JToken>();
+                groups = groups.Where(group => containers.Any(container => container.name == group.name)).ToList();
 
-                Console.WriteLine("Matching Groups: ");
+                Console.WriteLine();
+                Console.WriteLine("Containers:");
+                foreach (var container in containers)
+                    Console.WriteLine(container.name);
+
+                Console.WriteLine();
+                Console.WriteLine("Groups:");
                 foreach (var group in groups)
-                {
-                    if (differences.Contains(group["name"]))
-                        toRemove.Add(group);
-                    else
-                        Console.WriteLine(group["name"]);
-                }
+                    Console.WriteLine(group.name);
 
-                groups = groups.Except(toRemove).ToList();
+                switchCollection.containers = containers;
+                switchCollection.groups = groups;
 
-                switches[0] = containers;
-                switches[1] = groups;
             }
             catch (AK.Wwise.Waapi.Wamp.ErrorException e)
             {
                 Console.WriteLine(e.Message);
             }
 
-            return switches;
+            return switchCollection;
         }
 
         private static async Task<AK.Wwise.Waapi.JsonClient> CreateConnection()

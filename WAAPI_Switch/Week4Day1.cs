@@ -46,42 +46,38 @@ namespace WAAPI_Switch
 
                 var tokens = results["return"];
 
-                List<JToken> containers = new List<JToken>();
-                List<JToken> containerNames = new List<JToken>();
-                List<JToken> groups = new List<JToken>();
-                List<JToken> groupNames = new List<JToken>();
+                List<SwitchContainer> containers = new List<SwitchContainer>();
+                List<SwitchGroup> groups = new List<SwitchGroup>();
 
+                Console.WriteLine();
                 foreach (var token in tokens)
                 {
                     if (token["type"].ToString() == "SwitchContainer")
                     {
-                        containers.Add(token);
-                        containerNames.Add(token["name"]);
+                        containers.Add(token.ToObject<SwitchContainer>());
                         Console.WriteLine("Added " + token["name"].ToString() + " to Containers!");
                     }
 
                     if (token["type"].ToString() == "SwitchGroup")
                     {
-                        groups.Add(token);
-                        groupNames.Add(token["name"]);
+                        groups.Add(token.ToObject<SwitchGroup>());
                         Console.WriteLine("Added " + token["name"].ToString() + " to Groups!");
                     }
                 }
 
-                var differences = groupNames.Except(containerNames);
-                List<JToken> toRemove = new List<JToken>();
+                groups = groups.Where(group => containers.Any(container => container.name == group.name)).ToList();
 
-                Console.WriteLine("Matching Groups: ");
+                Console.WriteLine();
+                Console.WriteLine("Containers:");
+                foreach (var container in containers)
+                    Console.WriteLine(container.name);
+
+                Console.WriteLine();
+                Console.WriteLine("Groups:");
                 foreach (var group in groups)
-                {
-                    if (differences.Contains(group["name"]))
-                        toRemove.Add(group);
-                    else
-                        Console.WriteLine(group["name"]);
-                }
+                    Console.WriteLine(group.name);
 
-                groups = groups.Except(toRemove).ToList();
-
+                client.Close();
             }
             catch (AK.Wwise.Waapi.Wamp.ErrorException e)
             {
