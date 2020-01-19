@@ -12,8 +12,8 @@ namespace WAAPI_Switch
 
     public class SwitchAssignment
     {
-        public string childObject { get; set; }
-        public string switchReference { get; set; }
+        public string child { get; set; }
+        public string stateOrSwitch { get; set; }
     }
 
     public class SwitchContainerChild

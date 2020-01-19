@@ -25,20 +25,27 @@ namespace WAAPI_Switch
 
         private static async Task GetSwitchAssignments(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
-            var result = await client.Call(
-                ak.wwise.core.switchContainer.getAssignments,
-                new JObject
-                (
-                    new JProperty("id", switches.containers.ElementAt(0).id)
-                ),
-                null
-                );
+            foreach (var container in switches.containers)
+            {
+                var result = await client.Call(
+                    ak.wwise.core.switchContainer.getAssignments,
+                    new JObject
+                    (    
+                        new JProperty("id", container.id)
+                    ),
+                    null
+                );  
 
-            var token = result["return"][0];
-
-            Console.WriteLine();
-            Console.WriteLine("Assignments: ");
-            Console.WriteLine(token);
+                if (result["return"].Count() > 0)
+                {
+                    var tokens = result["return"];
+                    foreach (var assignment in tokens)
+                    {
+                        Console.WriteLine("Adding assignment " + assignment["child"]);
+                        container.assignments.Add(assignment.ToObject<SwitchAssignment>());
+                    }
+                }
+            }
         }
 
         private static async Task AssignSwitchContainers(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
