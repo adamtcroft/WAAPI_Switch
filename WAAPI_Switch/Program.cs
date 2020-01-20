@@ -13,8 +13,8 @@ namespace WAAPI_Switch
         {
             //MainClassDay1.MainDay1(args);
             //MainClassDay2.MainDay2(args);
-            MainClassDay3.MainDay3(args);
-            //MainClassDay4.MainDay4(args);
+            //MainClassDay3.MainDay3(args);
+            MainClassDay4.MainDay4(args);
         }
     }
 }
