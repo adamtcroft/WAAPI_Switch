@@ -16,17 +16,24 @@ namespace WAAPI_Switch
 
         static async Task _MainDay3()
         {
+            // Again, using .Result to return values
             var client = CreateConnection().Result;
             var switches = GetSwitchObjects(client).Result;
+
+            // These have no return value
             await AssignSwitchContainers(client, switches);
             await GetSwitchAssignments(client, switches);
-            client.Close();
+            await client.Close();
         }
 
+        // This new funciton queries for all the assignments of your Switch Containers.
+        // This data is now added to your SwitchContainer objects
         private static async Task GetSwitchAssignments(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
+            // For every parent switch container in our SwitchCollection...
             foreach (var container in switches.containers)
             {
+                // Use WAAPI to get all of its assignments
                 var result = await client.Call(
                     ak.wwise.core.switchContainer.getAssignments,
                     new JObject
@@ -36,18 +43,23 @@ namespace WAAPI_Switch
                     null
                 );  
 
+                // If any assignments exist, add them to the container.assignments list
                 if (result["return"].Count() > 0)
                 {
                     var tokens = result["return"];
                     foreach (var assignment in tokens)
                     {
                         Console.WriteLine("Adding assignment " + assignment["child"]);
+
+                        // This add call references the new SwitchAssignment object -
+                        // you can find this defined in SwitchContainer.cs
                         container.assignments.Add(assignment.ToObject<SwitchAssignment>());
                     }
                 }
             }
         }
 
+        // This function is the same as before, still assigning parent containers to groups
         private static async Task AssignSwitchContainers(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
             foreach (var container in switches.containers)
@@ -88,12 +100,15 @@ namespace WAAPI_Switch
             }
         }
 
+        // This function is now different - to move forward, you need information on the children of your
+        // groups and containers
         private static async Task<SwitchCollection> GetSwitchObjects(AK.Wwise.Waapi.JsonClient client)
         {
             SwitchCollection switchCollection = new SwitchCollection();
 
             try
             {
+                // This query is the same
                 var results = await client.Call(
                     ak.wwise.core.@object.get,
                     new JObject
@@ -116,10 +131,14 @@ namespace WAAPI_Switch
 
                 foreach (var token in tokens)
                 {
+                    // If we've got a Switch Container...
                     if (token["type"].ToString() == "SwitchContainer")
                     {
+                        // Turn the container into an object (rather than doing that and inserting it into the list
+                        // at the same time)
                         var container = token.ToObject<SwitchContainer>();
 
+                        // Query for all the child objects of the container - asking for their name and GUID
                         var containerResults = await client.Call(
                             ak.wwise.core.@object.get,
                             new JObject
@@ -139,18 +158,24 @@ namespace WAAPI_Switch
                             )
                         );
 
+                        // Add each child to the SwitchContainer object
                         foreach (var switchToken in containerResults["return"])
                         {
                             Console.WriteLine("Adding child " + switchToken["name"] + " to " + container.name);
                             container.children.Add(switchToken.ToObject<SwitchContainerChild>());
                         }
+                        // Add the SwitchContainer to the SwitchCollection's list of containers
                         containers.Add(container);
                     }
 
+                    // If we've got a group...
                     if (token["type"].ToString() == "SwitchGroup")
                     {
+                        // Turn the group into an object (rather than doing that and inserting it into the list
+                        // at the same time)
                         var group = token.ToObject<SwitchGroup>();
 
+                        // Query for all the child objects of the group - asking for their name and GUID
                         var groupResults = await client.Call(
                             ak.wwise.core.@object.get,
                             new JObject
@@ -170,11 +195,13 @@ namespace WAAPI_Switch
                             )
                         );
 
-                        foreach(var switchToken in groupResults["return"])
+                        // Add each child to the SwitchGroup object
+                        foreach (var switchToken in groupResults["return"])
                         {
                             Console.WriteLine("Adding switch " + switchToken["name"] + " to " + group.name);
                             group.switches.Add(switchToken.ToObject<WwiseSwitch>());
                         }
+                        // Add the SwitchGroup to the SwitchCollection's list of containers
                         groups.Add(group);
                     }
                 }
@@ -183,14 +210,6 @@ namespace WAAPI_Switch
 
                 switchCollection.containers = containers;
                 switchCollection.groups = groups;
-
-                Console.WriteLine();
-                Console.WriteLine("Matching Filters and Groups:");
-                foreach(var group in groups)
-                {
-                    Console.WriteLine(group.name);
-                }
-
             }
             catch (AK.Wwise.Waapi.Wamp.ErrorException e)
             {

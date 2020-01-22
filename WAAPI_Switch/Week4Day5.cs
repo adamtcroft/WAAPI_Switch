@@ -16,72 +16,101 @@ namespace WAAPI_Switch
 
         static async Task _MainDay5()
         {
+            // Client.Close() is now called at the end of this block
+            // because our connection times out for an unknown reason
+            // when getting user input
             var client = CreateConnection().Result;
             var switches = GetSwitchObjects(client).Result;
             await AssignSwitchContainers(client, switches);
             await GetSwitchAssignments(client, switches);
             await SetSwitchAssignments(client, switches);
-            client.Close();
+            await client.Close();
 
+            // Re-creating the connection solves the user input errors
             client = CreateConnection().Result;
             await SetDefaults(client, switches);
-            client.Close();
+            await client.Close();
         }
 
+        // This function is used to get user input in order to set the default switch
         private static async Task SetDefaults(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
+            // "Start:" here is called a label, its used in our if statements to return to this point of execution
+            // if the user gives us bad input.  Depending on who you're talking to, this may or may not be "good"
+            // programming practice
         Start:
 
             Console.WriteLine("Would you like to set default assignments? (y/n)");
+            // Read a single key of input from the user
             var result = Console.ReadKey();
             Console.WriteLine();
 
+            // If the user entered "y"...
             if (result.KeyChar == 'y')
             {
+                // For each group...
                 foreach (var group in switches.groups)
                 {
                     int choice = 1;
                     Console.WriteLine("Select default assignment for " + group.name + " : ");
+
+                    // List out and keep count of all the groups
                     foreach (var child in group.switches)
                     {
                         Console.WriteLine(choice + " - " + child.name);
                         choice++;
                     }
 
+                    // Here's another label
                     Select:
 
                     Console.WriteLine("Enter Selection: ");
+                    // Get user's selection
                     var index = Console.ReadKey();
                     Console.WriteLine();
 
+                    // If the user enters a number higher than the number of switches
+                    // or less than 1
+                    // or if their key press isn't a digit...
+                    // int.Parse(character.ToString()) is required here as "KeyChar" isn't a true integer value.
+                    // Using int.Parse() gives you the actual value that the user entered.
                     if(int.Parse(index.KeyChar.ToString()) > group.switches.Count || int.Parse(index.KeyChar.ToString()) < 1 || !(char.IsDigit(index.KeyChar)))
                     {
+                        // Return to the "Select:" label, so the user tries again
                         goto Select;
                     }
+                    // If the user entered correct input...
                     else
                     {
-                        var containerList = switches.containers.Where(c => c.name == group.name).ToList();
-                        var defaultChild = group.switches.ElementAt(int.Parse(index.KeyChar.ToString()) - 1);
+                        // Using LINQ, get the switch container where the container name matches the group name
+                        var container = switches.containers.Where(c => c.name == group.name).First();
+                        // Get the user selected default switch
+                        var defaultSwitch = group.switches.ElementAt(int.Parse(index.KeyChar.ToString()) - 1);
 
+                        // Assign the default using WAAPI
                         await client.Call(
                             ak.wwise.core.@object.setReference,
                             new JObject
                             (
                                 new JProperty("reference", "DefaultSwitchOrState"),
-                                new JProperty("object", containerList.ElementAt(0).id),
-                                new JProperty("value", defaultChild.id)
+                                new JProperty("object", container.id),
+                                new JProperty("value", defaultSwitch.id)
                             ),
                             null
                         );
                     }
                 }
             }
+            // If the user doesn't want to set defaults...
             else if(result.KeyChar == 'n')
             {
+                // return to _Main
                 return;
             }
+            // If the user enters a bad key press...
             else
             {
+                // Return to the "Start:" label and try again
                 goto Start;
             }
         }
@@ -91,8 +120,7 @@ namespace WAAPI_Switch
         {
             foreach (var item in children)
             {
-                var switchIndex = matchingGroup.switches.FindIndex(s => s.name == item.name);
-                var matchingSwitch = matchingGroup.switches.ElementAt(switchIndex);
+                var matchingSwitch = matchingGroup.switches.Where(s => s.name == item.name).First();
 
                 await client.Call(
                     ak.wwise.core.switchContainer.addAssignment,
@@ -141,8 +169,7 @@ namespace WAAPI_Switch
                 var unassigned = container.children.Where(c => !container.assignments.Exists(a => a.child == c.id)).ToList();
                 var assigned = container.children.Except(unassigned).ToList();
 
-                var groupIndex = switches.groups.FindIndex(s => s.name.StartsWith(container.name));
-                var matchingGroup = switches.groups.ElementAt(groupIndex);
+                var matchingGroup = switches.groups.Where(g => g.name == container.name).First();
 
                 if (assigned.Count > 0)
                 {

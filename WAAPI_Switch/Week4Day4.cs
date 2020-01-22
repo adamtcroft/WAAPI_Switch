@@ -21,17 +21,20 @@ namespace WAAPI_Switch
             await AssignSwitchContainers(client, switches);
             await GetSwitchAssignments(client, switches);
             await SetSwitchAssignments(client, switches);
-            client.Close();
+            await client.Close();
         }
 
+        // This function matches and assigns all unassigned switches
         private static async Task MatchAndAssignSwitches(AK.Wwise.Waapi.JsonClient client, List<SwitchContainerChild> children,
             SwitchGroup matchingGroup)
         {
+            // For each child object of the switch container...
             foreach (var item in children)
             {
-                var switchIndex = matchingGroup.switches.FindIndex(s => s.name == item.name);
-                var matchingSwitch = matchingGroup.switches.ElementAt(switchIndex);
+                // Grab the switch where the switch name equals the child name
+                var matchingSwitch = matchingGroup.switches.Where(s => s.name == item.name).First();
 
+                // Use WAAPI to add the assignment
                 await client.Call(
                     ak.wwise.core.switchContainer.addAssignment,
                     new JObject
@@ -43,24 +46,82 @@ namespace WAAPI_Switch
             }
         }
 
+        // This function checks existing assignments and removes any incorrecet ones
+        private static async Task CheckAssignments(AK.Wwise.Waapi.JsonClient client, List<SwitchContainerChild> assigned,
+            List<SwitchContainerChild> unassigned, SwitchGroup matchingGroup, SwitchContainer container)
+        {
+            // Create a new list of SwitchAssignments for those that are incorrect
+            // This is necessary because C# won't let you remove from a list while you're
+            // looping through it.
+            List<SwitchAssignment> toRemove = new List<SwitchAssignment>();
+
+            // For each child container...
+            foreach (var child in assigned)
+            {
+                // Grab the matching switch object
+                var matchingSwitch = matchingGroup.switches.Where(s => s.name == child.name).First();
+                // Grab the matching assignment object
+                var assignment = container.assignments.Where(a => a.child == child.id).First();
+
+                // if the matching switch and assignment id's aren't the same...
+                if (matchingSwitch.id != assignment.stateOrSwitch)
+                {
+                    // Add the assignment to the list to remove
+                    toRemove.Add(assignment);
+
+                    // Note the child object as now unassigned
+                    unassigned.Add(child);
+
+                    // Actually remove the assignment in Wwise with WAAPI
+                    await client.Call(
+                        ak.wwise.core.switchContainer.removeAssignment,
+                        new JObject
+                        (
+                            new JProperty("stateOrSwitch", assignment.stateOrSwitch),
+                            new JProperty("child", assignment.child)
+                        ),
+                        null
+                    );
+                }
+            }
+            // Rebuild the list of assignments by getting rid of the assignments that were removed
+            // via the loop
+            container.assignments = container.assignments.Except(toRemove).ToList();
+        }
+
+        // This function figures out which switches have been assigned, and which have been assigned incorrectly.
+        // From there, the correct assignments (where the name of the switch and name of the child container match)
+        // are made.
+        // Depending on how your assignments currently exist - this function potentially has plenty of bugs.
+        // It hasn't been tested for multiple assignment (as you can assign multiple child containers to a switch).
+        // But, within the realm of our requirements (unassigning single incorrect containers or assigning containers
+        // and switches where there are no assignments) - it works.
         private static async Task SetSwitchAssignments(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
-            foreach(var container in switches.containers)
+            // For each SwitchContainer
+            foreach (var container in switches.containers)
             {
-                var unassigned = container.children.Where(a => !container.assignments.Any(c => c.child == a.id)).ToList();
+                // Use LINQ to get a list of children where no switch assignment has been made
+                var unassigned = container.children.Where(c => !container.assignments.Exists(a => a.child == c.id)).ToList();
+
+                // Get a list of all the assigned groups by comparing all groups to the unassigned list
                 var assigned = container.children.Except(unassigned).ToList();
 
-                var groupIndex = switches.groups.FindIndex(s => s.name.StartsWith(container.name));
-                var matchingGroup = switches.groups.ElementAt(groupIndex);
+                // Use LINQ to grab the SwitchGroup whose name matches the current container we're looping through
+                var matchingGroup = switches.groups.Where(g => g.name == container.name).First();
 
-                if(assigned.Count > 0)
+                // If any object have been assigned...
+                if (assigned.Count > 0)
                 {
-                    MatchAndAssignSwitches(client, assigned, matchingGroup);
+                    // Check to see that the names match correctly
+                    await CheckAssignments(client, assigned, unassigned, matchingGroup, container);
                 }
 
+                // If there are any unassigned...
                 if (unassigned.Count > 0)
                 {
-                    MatchAndAssignSwitches(client, unassigned, matchingGroup);
+                    // Assign them
+                    await MatchAndAssignSwitches(client, unassigned, matchingGroup);
                 }
             }
         }
@@ -225,14 +286,6 @@ namespace WAAPI_Switch
 
                 switchCollection.containers = containers;
                 switchCollection.groups = groups;
-
-                Console.WriteLine();
-                Console.WriteLine("Matching Filters and Groups:");
-                foreach (var group in groups)
-                {
-                    Console.WriteLine(group.name);
-                }
-
             }
             catch (AK.Wwise.Waapi.Wamp.ErrorException e)
             {
