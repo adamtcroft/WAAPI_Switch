@@ -43,6 +43,7 @@
     <Compile Include="Week4Day3.cs" />
     <Compile Include="WwiseSwitch.cs" />
     <Compile Include="Week4Day4.cs" />
+    <Compile Include="Week4Day5.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
