@@ -24,31 +24,43 @@ namespace WAAPI_Switch
             client.Close();
         }
 
+        private static async Task MatchAndAssignSwitches(AK.Wwise.Waapi.JsonClient client, List<SwitchContainerChild> children,
+            SwitchGroup matchingGroup)
+        {
+            foreach (var item in children)
+            {
+                var switchIndex = matchingGroup.switches.FindIndex(s => s.name == item.name);
+                var matchingSwitch = matchingGroup.switches.ElementAt(switchIndex);
+
+                await client.Call(
+                    ak.wwise.core.switchContainer.addAssignment,
+                    new JObject
+                    (
+                        new JProperty("stateOrSwitch", matchingSwitch.id),
+                        new JProperty("child", item.id)
+                    )
+                );
+            }
+        }
+
         private static async Task SetSwitchAssignments(AK.Wwise.Waapi.JsonClient client, SwitchCollection switches)
         {
             foreach(var container in switches.containers)
             {
                 var unassigned = container.children.Where(a => !container.assignments.Any(c => c.child == a.id)).ToList();
+                var assigned = container.children.Except(unassigned).ToList();
 
-                if(unassigned.Count > 0)
+                var groupIndex = switches.groups.FindIndex(s => s.name.StartsWith(container.name));
+                var matchingGroup = switches.groups.ElementAt(groupIndex);
+
+                if(assigned.Count > 0)
                 {
-                    var groupIndex = switches.groups.FindIndex(s => s.name.StartsWith(container.name));
-                    var matchingGroup = switches.groups.ElementAt(groupIndex);
+                    MatchAndAssignSwitches(client, assigned, matchingGroup);
+                }
 
-                    foreach (var item in unassigned)
-                    {
-                        var switchIndex = matchingGroup.switches.FindIndex(s => s.name == item.name);
-                        var matchingSwitch = matchingGroup.switches.ElementAt(switchIndex);
-
-                        await client.Call(
-                            ak.wwise.core.switchContainer.addAssignment,
-                            new JObject
-                            (
-                                new JProperty("stateOrSwitch", matchingSwitch.id),
-                                new JProperty("child", item.id)
-                            )
-                        );
-                    }
+                if (unassigned.Count > 0)
+                {
+                    MatchAndAssignSwitches(client, unassigned, matchingGroup);
                 }
             }
         }
